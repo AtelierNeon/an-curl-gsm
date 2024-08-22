@@ -57,6 +57,9 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 if(USE_ARES)
   include_directories(${CARES_INCLUDE_DIR})
+  if(CARES_INCLUDE_DIRS)
+    include_directories(${CARES_INCLUDE_DIRS})
+  endif()
 endif()
 
 add_library(
@@ -87,7 +90,12 @@ if(NOT BUILD_SHARED_LIBS)
     set_target_properties(${LIB_NAME} PROPERTIES INTERFACE_COMPILE_DEFINITIONS CURL_STATICLIB)
 endif()
 
-target_link_libraries(${LIB_NAME} PRIVATE ${CURL_LIBS})
+if(USE_ARES)
+  if(CARES_LIBRARIES)
+    list(APPEND CURL_LIBS ${CARES_LIBRARIES})
+  endif()
+endif()
+target_link_libraries(${LIB_NAME} ${CURL_LIBS})
 target_link_libraries(curlu PRIVATE ${CURL_LIBS})
 
 transform_makefile_inc("Makefile.soname" "${CMAKE_CURRENT_BINARY_DIR}/Makefile.soname.cmake")
@@ -163,14 +171,16 @@ target_include_directories(${LIB_NAME} INTERFACE
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   $<BUILD_INTERFACE:${CURL_SOURCE_DIR}/include>)
 
-if(CURL_ENABLE_EXPORT_TARGET)
+if(NOT CURL_WITHOUT_INSTALL_LIBRARIES AND NOT CURL_WITHOUT_INSTALL_ALL)
   install(TARGETS ${LIB_NAME}
     EXPORT ${TARGETS_EXPORT_NAME}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   )
+endif()
 
+if(CURL_ENABLE_EXPORT_TARGET)
   export(TARGETS ${LIB_NAME}
          FILE ${PROJECT_BINARY_DIR}/libcurl-target.cmake
          NAMESPACE ${PROJECT_NAME}::

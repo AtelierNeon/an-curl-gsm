@@ -119,6 +119,8 @@ if(WIN32)
       add_compile_options(-municode)
     endif()
   endif()
+else()
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 option(CURL_LTO "Turn on compiler Link Time Optimizations" OFF)
 
@@ -149,15 +151,29 @@ endif()
 # initialize CURL_LIBS
 set(CURL_LIBS "")
 
+option(CURL_WITH_CARES "Build CURL with c-ares." OFF)
+option(CURL_WITH_SHARED_CARES "Build CURL with shared version of c-ares." OFF)
+if(CURL_WITH_CARES)
+  set(ENABLE_ARES ON)
+endif()
+
 if(ENABLE_ARES)
   set(USE_ARES 1)
-  find_package(CARES REQUIRED)
-  list(APPEND CURL_LIBS ${CARES_LIBRARY})
+  if(CURL_WITH_SHARED_CARES)
+    set(CARES_USE_STATIC_LIBS OFF)
+  else()
+    set(CARES_USE_STATIC_LIBS ON)
+  endif()
+  find_package(SiblingCARES)
+  if(NOT CARES_FOUND)
+    find_package(CARES REQUIRED)
+    list(APPEND CURL_LIBS ${CARES_LIBRARY})
+  endif()
 endif()
 
 include(CurlSymbolHiding)
 
-option(CURL_ENABLE_EXPORT_TARGET "to enable cmake export target" ON)
+option(CURL_ENABLE_EXPORT_TARGET "to enable cmake export target" OFF)
 mark_as_advanced(CURL_ENABLE_EXPORT_TARGET)
 
 option(CURL_DISABLE_ALTSVC "disables alt-svc support" OFF)
@@ -186,7 +202,7 @@ option(CURL_DISABLE_HTTP_AUTH "disables all HTTP authentication methods" OFF)
 mark_as_advanced(CURL_DISABLE_HTTP_AUTH)
 option(CURL_DISABLE_IMAP "disables IMAP" OFF)
 mark_as_advanced(CURL_DISABLE_IMAP)
-option(CURL_DISABLE_LDAP "disables LDAP" OFF)
+option(CURL_DISABLE_LDAP "disables LDAP" ON)
 mark_as_advanced(CURL_DISABLE_LDAP)
 option(CURL_DISABLE_LDAPS "disables LDAPS" OFF)
 mark_as_advanced(CURL_DISABLE_LDAPS)
@@ -336,7 +352,7 @@ if(ENABLE_THREADED_RESOLVER)
 endif()
 
 # Check for all needed libraries
-check_library_exists_concat("socket" connect      HAVE_LIBSOCKET)
+#check_library_exists_concat("socket" connect      HAVE_LIBSOCKET)
 
 check_function_exists(gethostname HAVE_GETHOSTNAME)
 
@@ -361,7 +377,28 @@ endif()
 # check SSL libraries
 # TODO support GnuTLS
 option(CURL_ENABLE_SSL "Enable SSL support" ON)
+option(CURL_WITH_LIBSSH2 "Build CURL with libssh2." OFF)
+option(CURL_WITH_NGHTTP2 "Build CURL with nghttp2." OFF)
+option(CURL_WITH_OPENSSL "Build CURL with OpenSSL." OFF)
+option(CURL_WITH_SHARED_LIBRARIES "Build shared version of the libcurl library." OFF)
+option(CURL_WITH_SHARED_LIBSSH2 "Build CURL with shared version of libssh2." OFF)
+option(CURL_WITH_SHARED_NGHTTP2 "Build CURL with shared version of nghttp2." OFF)
+option(CURL_WITH_SHARED_ZLIB "Build CURL with shared version of Zlib." OFF)
+option(CURL_WITH_ZLIB "Build CURL with Zlib." OFF)
+option(CURL_WITHOUT_APPS "Build CURL without apps." OFF)
+option(CURL_WITHOUT_INSTALL_ALL "Build CURL without installing all artifacts." OFF)
+option(CURL_WITHOUT_INSTALL_FILES "Build CURL without installing files." OFF)
+option(CURL_WITHOUT_INSTALL_HEADERS "Build CURL without installing headers." OFF)
+option(CURL_WITHOUT_INSTALL_LIBRARIES "Build CURL without installing libraries." OFF)
 
+if(CURL_WITHOUT_APPS)
+  set(BUILD_CURL_EXE OFF)
+endif()
+if(CURL_WITH_SHARED_LIBRARIES)
+  set(BUILD_SHARED_LIBS ON)
+else()
+  set(BUILD_SHARED_LIBS OFF)
+endif()
 if(APPLE)
   cmake_dependent_option(CURL_USE_SECTRANSP "enable Apple OS native SSL/TLS" OFF CURL_ENABLE_SSL OFF)
 endif()
@@ -426,19 +463,28 @@ if(use_core_foundation)
   list(APPEND CURL_LIBS "-framework CoreFoundation")
 endif()
 
-if(CURL_USE_OPENSSL)
-  find_package(OpenSSL REQUIRED)
-  set(SSL_ENABLED ON)
-  set(USE_OPENSSL ON)
+if(CURL_USE_OPENSSL OR CURL_WITH_OPENSSL)
+  find_package(SiblingOpenSSL)
+  if(OPENSSL_FOUND)
+    set(SSL_ENABLED ON)
+    set(USE_OPENSSL ON)
 
-  # Depend on OpenSSL via imported targets if supported by the running
-  # version of CMake.  This allows our dependents to get our dependencies
-  # transitively.
-  if(NOT CMAKE_VERSION VERSION_LESS 3.4)
-    list(APPEND CURL_LIBS OpenSSL::SSL OpenSSL::Crypto)
-  else()
     list(APPEND CURL_LIBS ${OPENSSL_LIBRARIES})
-    include_directories(${OPENSSL_INCLUDE_DIR})
+    include_directories(${OPENSSL_INCLUDE_DIRS})
+  else()
+    find_package(OpenSSL REQUIRED)
+    set(SSL_ENABLED ON)
+    set(USE_OPENSSL ON)
+
+    # Depend on OpenSSL via imported targets if supported by the running
+    # version of CMake.  This allows our dependents to get our dependencies
+    # transitively.
+    if(NOT CMAKE_VERSION VERSION_LESS 3.4)
+      list(APPEND CURL_LIBS OpenSSL::SSL OpenSSL::Crypto)
+    else()
+      list(APPEND CURL_LIBS ${OPENSSL_LIBRARIES})
+      include_directories(${OPENSSL_INCLUDE_DIR})
+    endif()
   endif()
 
   if(WIN32)
@@ -504,21 +550,39 @@ endif()
 
 set(HAVE_LIBZ OFF)
 set(USE_ZLIB OFF)
-optional_dependency(ZLIB)
+
+if(CURL_WITH_ZLIB)
+  if(CURL_WITH_SHARED_ZLIB)
+    set(ZLIB_USE_STATIC_LIBS OFF)
+  else()
+    set(ZLIB_USE_STATIC_LIBS ON)
+  endif()
+  find_package(SiblingZLIB)
+endif()
 if(ZLIB_FOUND)
   set(HAVE_LIBZ ON)
   set(USE_ZLIB ON)
 
-  # Depend on ZLIB via imported targets if supported by the running
-  # version of CMake.  This allows our dependents to get our dependencies
-  # transitively.
-  if(NOT CMAKE_VERSION VERSION_LESS 3.4)
-    list(APPEND CURL_LIBS ZLIB::ZLIB)
-  else()
-    list(APPEND CURL_LIBS ${ZLIB_LIBRARIES})
-    include_directories(${ZLIB_INCLUDE_DIRS})
-  endif()
+  list(APPEND CURL_LIBS ${ZLIB_LIBRARIES})
+  include_directories(${ZLIB_INCLUDE_DIRS})
   list(APPEND CMAKE_REQUIRED_INCLUDES ${ZLIB_INCLUDE_DIRS})
+else()
+  optional_dependency(ZLIB)
+  if(ZLIB_FOUND)
+    set(HAVE_LIBZ ON)
+    set(USE_ZLIB ON)
+
+    # Depend on ZLIB via imported targets if supported by the running
+    # version of CMake.  This allows our dependents to get our dependencies
+    # transitively.
+    if(NOT CMAKE_VERSION VERSION_LESS 3.4)
+      list(APPEND CURL_LIBS ZLIB::ZLIB)
+    else()
+      list(APPEND CURL_LIBS ${ZLIB_LIBRARIES})
+      include_directories(${ZLIB_INCLUDE_DIRS})
+    endif()
+    list(APPEND CMAKE_REQUIRED_INCLUDES ${ZLIB_INCLUDE_DIRS})
+  endif()
 endif()
 
 option(CURL_BROTLI "Set to ON to enable building curl with brotli support." OFF)
@@ -553,8 +617,21 @@ if(CURL_ZSTD)
 endif()
 
 option(USE_NGHTTP2 "Use Nghttp2 library" OFF)
+if(CURL_WITH_NGHTTP2)
+  set(USE_NGHTTP2 ON)
+else()
+  set(USE_NGHTTP2 OFF)
+endif()
 if(USE_NGHTTP2)
-  find_package(NGHTTP2 REQUIRED)
+  if(CURL_WITH_SHARED_NGHTTP2)
+    set(NGHTTP2_USE_STATIC_LIBS OFF)
+  else()
+    set(NGHTTP2_USE_STATIC_LIBS ON)
+  endif()
+  find_package(SiblingNGHTTP2)
+  if(NOT NGHTTP2_FOUND)
+    find_package(NGHTTP2 REQUIRED)
+  endif()
   include_directories(${NGHTTP2_INCLUDE_DIRS})
   list(APPEND CURL_LIBS ${NGHTTP2_LIBRARIES})
 endif()
@@ -675,7 +752,9 @@ if(NOT CURL_DISABLE_LDAP)
   endif()
 
   # Now that we know, we're not using windows LDAP...
-  if(NOT USE_WIN32_LDAP)
+  if(USE_WIN32_LDAP)
+    check_include_file_concat("winldap.h" HAVE_WINLDAP_H)
+  else()
     # Check for LDAP
     set(CMAKE_REQUIRED_LIBRARIES ${OPENSSL_LIBRARIES})
     check_library_exists_concat(${CMAKE_LDAP_LIB} ldap_init HAVE_LIBLDAP)
@@ -760,7 +839,7 @@ if(NOT CURL_DISABLE_LDAPS)
 endif()
 
 # Check for idn2
-option(USE_LIBIDN2 "Use libidn2 for IDN support" ON)
+option(USE_LIBIDN2 "Use libidn2 for IDN support" OFF)
 if(USE_LIBIDN2)
   check_library_exists_concat("idn2" idn2_lookup_ul HAVE_LIBIDN2)
 else()
@@ -793,14 +872,32 @@ endif()
 option(CURL_USE_LIBSSH2 "Use libSSH2" ON)
 mark_as_advanced(CURL_USE_LIBSSH2)
 set(USE_LIBSSH2 OFF)
+if(CURL_WITH_LIBSSH2)
+  set(CURL_USE_LIBSSH2 ON)
+else()
+  set(CURL_USE_LIBSSH2 OFF)
+endif()
 
 if(CURL_USE_LIBSSH2)
-  find_package(LibSSH2)
+  if(CURL_WITH_SHARED_LIBSSH2)
+    set(LIBSSH2_USE_STATIC_LIBS OFF)
+  else()
+    set(LIBSSH2_USE_STATIC_LIBS ON)
+  endif()
+  find_package(SiblingLibSSH2)
   if(LIBSSH2_FOUND)
-    list(APPEND CURL_LIBS ${LIBSSH2_LIBRARY})
-    list(APPEND CMAKE_REQUIRED_INCLUDES "${LIBSSH2_INCLUDE_DIR}")
-    include_directories("${LIBSSH2_INCLUDE_DIR}")
+    list(APPEND CURL_LIBS ${LIBSSH2_LIBRARIES})
+    list(APPEND CMAKE_REQUIRED_INCLUDES "${LIBSSH2_INCLUDE_DIRS}")
+    include_directories("${LIBSSH2_INCLUDE_DIRS}")
     set(USE_LIBSSH2 ON)
+  else()
+    find_package(LibSSH2)
+    if(LIBSSH2_FOUND)
+      list(APPEND CURL_LIBS ${LIBSSH2_LIBRARY})
+      list(APPEND CMAKE_REQUIRED_INCLUDES "${LIBSSH2_INCLUDE_DIR}")
+      include_directories("${LIBSSH2_INCLUDE_DIR}")
+      set(USE_LIBSSH2 ON)
+    endif()
   endif()
 endif()
 
@@ -1592,23 +1689,29 @@ set(VERSIONNUM              "${CURL_VERSION_NUM}")
 # * ENABLE_STATIC
 configure_file("${CURL_SOURCE_DIR}/curl-config.in"
                "${CURL_BINARY_DIR}/curl-config" @ONLY)
-install(FILES "${CURL_BINARY_DIR}/curl-config"
-        DESTINATION ${CMAKE_INSTALL_BINDIR}
-        PERMISSIONS
-          OWNER_READ OWNER_WRITE OWNER_EXECUTE
-          GROUP_READ GROUP_EXECUTE
-          WORLD_READ WORLD_EXECUTE)
+if(NOT CURL_WITHOUT_INSTALL_FILES AND NOT CURL_WITHOUT_INSTALL_ALL)
+  install(FILES "${CURL_BINARY_DIR}/curl-config"
+          DESTINATION ${CMAKE_INSTALL_BINDIR}
+          PERMISSIONS
+            OWNER_READ OWNER_WRITE OWNER_EXECUTE
+            GROUP_READ GROUP_EXECUTE
+            WORLD_READ WORLD_EXECUTE)
+endif()
 
 # Finally generate a pkg-config file matching this config
 configure_file("${CURL_SOURCE_DIR}/libcurl.pc.in"
                "${CURL_BINARY_DIR}/libcurl.pc" @ONLY)
-install(FILES "${CURL_BINARY_DIR}/libcurl.pc"
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+if(NOT CURL_WITHOUT_INSTALL_FILES AND NOT CURL_WITHOUT_INSTALL_ALL)
+  install(FILES "${CURL_BINARY_DIR}/libcurl.pc"
+          DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+endif()
 
 # install headers
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/curl"
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    FILES_MATCHING PATTERN "*.h")
+if(NOT CURL_WITHOUT_INSTALL_HEADERS AND NOT CURL_WITHOUT_INSTALL_ALL)
+  install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/curl"
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+      FILES_MATCHING PATTERN "*.h")
+endif()
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
@@ -1634,7 +1737,7 @@ configure_package_config_file(CMake/curl-config.cmake.in
         INSTALL_DESTINATION ${CURL_INSTALL_CMAKE_DIR}
 )
 
-if(CURL_ENABLE_EXPORT_TARGET)
+if(CURL_ENABLE_EXPORT_TARGET AND NOT CURL_WITHOUT_INSTALL_FILES AND NOT CURL_WITHOUT_INSTALL_ALL)
   install(
           EXPORT "${TARGETS_EXPORT_NAME}"
           NAMESPACE "${PROJECT_NAME}::"
@@ -1642,10 +1745,12 @@ if(CURL_ENABLE_EXPORT_TARGET)
   )
 endif()
 
-install(
-        FILES ${version_config} ${project_config}
-        DESTINATION ${CURL_INSTALL_CMAKE_DIR}
-)
+if(NOT CURL_WITHOUT_INSTALL_FILES AND NOT CURL_WITHOUT_INSTALL_ALL)
+  install(
+          FILES ${version_config} ${project_config}
+          DESTINATION ${CURL_INSTALL_CMAKE_DIR}
+  )
+endif()
 
 # Workaround for MSVS10 to avoid the Dialog Hell
 # FIXME: This could be removed with future version of CMake.
