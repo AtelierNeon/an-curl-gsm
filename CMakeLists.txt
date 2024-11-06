@@ -265,7 +265,7 @@ option(CURL_DISABLE_HTTP_AUTH "disables all HTTP authentication methods" OFF)
 mark_as_advanced(CURL_DISABLE_HTTP_AUTH)
 option(CURL_DISABLE_IMAP "disables IMAP" OFF)
 mark_as_advanced(CURL_DISABLE_IMAP)
-option(CURL_DISABLE_LDAP "disables LDAP" OFF)
+option(CURL_DISABLE_LDAP "disables LDAP" ON)
 mark_as_advanced(CURL_DISABLE_LDAP)
 option(CURL_DISABLE_LDAPS "disables LDAPS" OFF)
 mark_as_advanced(CURL_DISABLE_LDAPS)
@@ -415,7 +415,7 @@ if(ENABLE_THREADED_RESOLVER)
 endif()
 
 # Check for all needed libraries
-check_library_exists_concat("socket" connect      HAVE_LIBSOCKET)
+#check_library_exists_concat("socket" connect      HAVE_LIBSOCKET)
 
 check_function_exists(gethostname HAVE_GETHOSTNAME)
 
