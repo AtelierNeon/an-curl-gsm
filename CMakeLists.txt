@@ -217,8 +217,8 @@ if(ENABLE_ARES)
   find_package(SiblingCARES)
   if(NOT CARES_FOUND)
     find_package(CARES REQUIRED)
-    list(APPEND CURL_LIBS ${CARES_LIBRARY})
   endif()
+  list(APPEND CURL_LIBS ${CARES_LIBRARY})
 endif()
 
 include(CurlSymbolHiding)
@@ -358,7 +358,7 @@ if(USE_MANUAL)
     #nroff is currently only used when USE_MANUAL is set, so we can prevent the warning of no *NROFF if USE_MANUAL is OFF (or not defined), by not even looking for NROFF..
     curl_nroff_check()
 endif()
-find_package(Perl)
+find_package(Perl QUIET)
 
 cmake_dependent_option(ENABLE_MANUAL "to provide the built-in manual"
     ON "NROFF_USEFUL;PERL_FOUND"
@@ -516,6 +516,10 @@ if(CURL_USE_OPENSSL OR CURL_WITH_OPENSSL)
   if(OPENSSL_FOUND)
     set(SSL_ENABLED ON)
     set(USE_OPENSSL ON)
+    set(HAVE_AWSLC FALSE)
+    set(HAVE_BORINGSSL FALSE)
+    set(HAVE_OPENSSL_SRP TRUE)
+    set(HAVE_SSL_SET0_WBIO TRUE)
 
     list(APPEND CURL_LIBS ${OPENSSL_LIBRARIES})
     include_directories(${OPENSSL_INCLUDE_DIRS})
@@ -931,7 +935,7 @@ if(WIN32)
 endif()
 
 #libpsl
-option(CURL_USE_LIBPSL "Use libPSL" ON)
+option(CURL_USE_LIBPSL "Use libPSL" OFF)
 mark_as_advanced(CURL_USE_LIBPSL)
 set(USE_LIBPSL OFF)
 
