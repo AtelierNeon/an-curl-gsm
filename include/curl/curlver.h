@@ -70,7 +70,7 @@
  *
  * "2007-11-23"
  */
-#define LIBCURL_TIMESTAMP "2023-10-11"
+#define LIBCURL_TIMESTAMP "2025-07-16"
 
 #define CURL_VERSION_BITS(x,y,z) ((x)<<16|(y)<<8|(z))
 #define CURL_AT_LEAST_VERSION(x,y,z) \

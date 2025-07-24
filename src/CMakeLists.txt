@@ -126,8 +126,10 @@ endif()
 
 ################################################################################
 
-install(TARGETS ${EXE_NAME} EXPORT ${TARGETS_EXPORT_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR})
-export(TARGETS ${EXE_NAME}
-  FILE "${PROJECT_BINARY_DIR}/curl-target.cmake"
-  NAMESPACE ${PROJECT_NAME}::
-)
+if(NOT CURL_WITHOUT_INSTALL_FILES AND NOT CURL_WITHOUT_INSTALL_ALL)
+  install(TARGETS ${EXE_NAME} EXPORT ${TARGETS_EXPORT_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR})
+  export(TARGETS ${EXE_NAME}
+    FILE "${PROJECT_BINARY_DIR}/curl-target.cmake"
+    NAMESPACE ${PROJECT_NAME}::
+  )
+endif()

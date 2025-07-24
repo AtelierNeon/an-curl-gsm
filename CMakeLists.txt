@@ -2461,12 +2461,14 @@ if(NOT CURL_DISABLE_INSTALL)
   configure_file(
     "${PROJECT_SOURCE_DIR}/curl-config.in"
     "${PROJECT_BINARY_DIR}/curl-config" @ONLY)
-  install(FILES "${PROJECT_BINARY_DIR}/curl-config"
-    DESTINATION ${CMAKE_INSTALL_BINDIR}
-    PERMISSIONS
-      OWNER_READ OWNER_WRITE OWNER_EXECUTE
-      GROUP_READ GROUP_EXECUTE
-      WORLD_READ WORLD_EXECUTE)
+  if(NOT CURL_WITHOUT_INSTALL_FILES AND NOT CURL_WITHOUT_INSTALL_ALL)
+    install(FILES "${PROJECT_BINARY_DIR}/curl-config"
+      DESTINATION ${CMAKE_INSTALL_BINDIR}
+      PERMISSIONS
+        OWNER_READ OWNER_WRITE OWNER_EXECUTE
+        GROUP_READ GROUP_EXECUTE
+        WORLD_READ WORLD_EXECUTE)
+  endif()
 
   # Generate a pkg-config file matching this config.
   # Consumed variables:
@@ -2492,13 +2494,17 @@ if(NOT CURL_DISABLE_INSTALL)
   configure_file(
     "${PROJECT_SOURCE_DIR}/libcurl.pc.in"
     "${PROJECT_BINARY_DIR}/libcurl.pc" @ONLY)
-  install(FILES "${PROJECT_BINARY_DIR}/libcurl.pc"
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
+  if(NOT CURL_WITHOUT_INSTALL_FILES AND NOT CURL_WITHOUT_INSTALL_ALL)
+    install(FILES "${PROJECT_BINARY_DIR}/libcurl.pc"
+      DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
+  endif()
 
   # Install headers
-  install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/curl"
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    FILES_MATCHING PATTERN "*.h")
+  if(NOT CURL_WITHOUT_INSTALL_HEADERS AND NOT CURL_WITHOUT_INSTALL_ALL)
+    install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/curl"
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+      FILES_MATCHING PATTERN "*.h")
+  endif()
 
   include(CMakePackageConfigHelpers)
   write_basic_package_version_file(
