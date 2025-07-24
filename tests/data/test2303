@@ -22,7 +22,7 @@ hello
 <client>
 # require debug for the forced CURL_ENTROPY
 <features>
-debug
+Debug
 ws
 </features>
 <server>
@@ -55,5 +55,8 @@ Sec-WebSocket-Key: NDMyMTUzMjE2MzIxNzMyMQ==
 <errorcode>
 22
 </errorcode>
+<limits>
+Maximum allocated: 1300000
+</limits>
 </verify>
 </testcase>

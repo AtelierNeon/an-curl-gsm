@@ -30,16 +30,15 @@
  * first connection and open a second.
  */
 
-#include "test.h"
-#include "testutil.h"
+#include "first.h"
+
 #include "testtrace.h"
-#include "warnless.h"
 #include "memdebug.h"
 
-int test(char *URL)
+static CURLcode test_lib1542(char *URL)
 {
   CURL *easy = NULL;
-  int res = 0;
+  CURLcode res = CURLE_OK;
 
   global_init(CURL_GLOBAL_ALL);
 
@@ -63,7 +62,7 @@ int test(char *URL)
 
   /* CURLOPT_MAXLIFETIME_CONN is inclusive - the connection needs to be 2
    * seconds old */
-  sleep(2);
+  curlx_wait_ms(2000);
 
   res = curl_easy_perform(easy);
   if(res)

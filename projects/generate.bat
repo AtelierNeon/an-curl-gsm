@@ -39,7 +39,7 @@ rem ***************************************************************************
   cd /d "%~0\.." 1>NUL 2>&1
 
   rem Check we are running from a curl git repository
-  if not exist ..\GIT-INFO goto norepo
+  if not exist ..\GIT-INFO.md goto norepo
 
 :parseArgs
   if "%~1" == "" goto start
@@ -52,19 +52,17 @@ rem ***************************************************************************
     set VERSION=VC11
   ) else if /i "%~1" == "vc12" (
     set VERSION=VC12
-  ) else if /i "%~1" == "vc14" (
-    set VERSION=VC14
-  ) else if /i "%~1" == "vc14.10" (
-    set VERSION=VC14.10
-  ) else if /i "%~1" == "vc14.30" (
-    set VERSION=VC14.30
   ) else if /i "%~1" == "-clean" (
     set MODE=CLEAN
   ) else if /i "%~1" == "-?" (
     goto syntax
+  ) else if /i "%~1" == "/?" (
+    goto syntax
   ) else if /i "%~1" == "-h" (
     goto syntax
   ) else if /i "%~1" == "-help" (
+    goto syntax
+  ) else if /i "%~1" == "--help" (
     goto syntax
   ) else (
     goto unknown
@@ -73,22 +71,10 @@ rem ***************************************************************************
   shift & goto parseArgs
 
 :start
-  if exist ..\buildconf.bat (
-    if "%MODE%" == "GENERATE" (
-      call ..\buildconf
-    ) else if "%VERSION%" == "PRE" (
-      call ..\buildconf -clean
-    ) else if "%VERSION%" == "ALL" (
-      call ..\buildconf -clean
-    )
-  )
   if "%VERSION%" == "PRE" goto success
   if "%VERSION%" == "VC10" goto vc10
   if "%VERSION%" == "VC11" goto vc11
   if "%VERSION%" == "VC12" goto vc12
-  if "%VERSION%" == "VC14" goto vc14
-  if "%VERSION%" == "VC14.10" goto vc14.10
-  if "%VERSION%" == "VC14.30" goto vc14.30
 
 :vc10
   echo.
@@ -133,56 +119,11 @@ rem ***************************************************************************
     call :clean Windows\VC12\lib\libcurl.vcxproj
   )
 
-  if not "%VERSION%" == "ALL" goto success
-
-:vc14
-  echo.
-
-  if "%MODE%" == "GENERATE" (
-    echo Generating VC14 project files
-    call :generate vcxproj Windows\VC14\src\curl.tmpl Windows\VC14\src\curl.vcxproj
-    call :generate vcxproj Windows\VC14\lib\libcurl.tmpl Windows\VC14\lib\libcurl.vcxproj
-  ) else (
-    echo Removing VC14 project files
-    call :clean Windows\VC14\src\curl.vcxproj
-    call :clean Windows\VC14\lib\libcurl.vcxproj
-  )
-
-  if not "%VERSION%" == "ALL" goto success
-
-:vc14.10
-  echo.
-
-  if "%MODE%" == "GENERATE" (
-    echo Generating VC14.10 project files
-    call :generate vcxproj Windows\VC14.10\src\curl.tmpl Windows\VC14.10\src\curl.vcxproj
-    call :generate vcxproj Windows\VC14.10\lib\libcurl.tmpl Windows\VC14.10\lib\libcurl.vcxproj
-  ) else (
-    echo Removing VC14.10 project files
-    call :clean Windows\VC14.10\src\curl.vcxproj
-    call :clean Windows\VC14.10\lib\libcurl.vcxproj
-  )
-
-  if not "%VERSION%" == "ALL" goto success
-
-:vc14.30
-  echo.
-
-  if "%MODE%" == "GENERATE" (
-    echo Generating VC14.30 project files
-    call :generate vcxproj Windows\VC14.30\src\curl.tmpl Windows\VC14.30\src\curl.vcxproj
-    call :generate vcxproj Windows\VC14.30\lib\libcurl.tmpl Windows\VC14.30\lib\libcurl.vcxproj
-  ) else (
-    echo Removing VC14.30 project files
-    call :clean Windows\VC14.30\src\curl.vcxproj
-    call :clean Windows\VC14.30\lib\libcurl.vcxproj
-  )
-
   goto success
 
 rem Main generate function.
 rem
-rem %1 - Project Type (vcxproj for VC10, VC11, VC12, VC14, VC14.10 and VC14.30)
+rem %1 - Project Type (vcxproj for VC10, VC11, VC12, VC14, VC14.10, VC14.20 and VC14.30)
 rem %2 - Input template file
 rem %3 - Output project file
 rem
@@ -204,32 +145,16 @@ rem
     set "var=!var:*:=!"
 
     if "!var!" == "CURL_SRC_C_FILES" (
-      for /f "delims=" %%c in ('dir /b ..\src\*.c') do call :element %1 src "%%c" %3
+      for /f "delims=" %%c in ('dir /b ..\src\*.c') do (
+        if /i "%%c" NEQ "curlinfo.c" call :element %1 src "%%c" %3
+      )
     ) else if "!var!" == "CURL_SRC_H_FILES" (
       for /f "delims=" %%h in ('dir /b ..\src\*.h') do call :element %1 src "%%h" %3
     ) else if "!var!" == "CURL_SRC_RC_FILES" (
       for /f "delims=" %%r in ('dir /b ..\src\*.rc') do call :element %1 src "%%r" %3
-    ) else if "!var!" == "CURL_SRC_X_C_FILES" (
-      call :element %1 lib "strtoofft.c" %3
-      call :element %1 lib "timediff.c" %3
-      call :element %1 lib "nonblock.c" %3
-      call :element %1 lib "warnless.c" %3
-      call :element %1 lib "curl_multibyte.c" %3
-      call :element %1 lib "version_win32.c" %3
-      call :element %1 lib "dynbuf.c" %3
-      call :element %1 lib "base64.c" %3
     ) else if "!var!" == "CURL_SRC_X_H_FILES" (
       call :element %1 lib "config-win32.h" %3
       call :element %1 lib "curl_setup.h" %3
-      call :element %1 lib "strtoofft.h" %3
-      call :element %1 lib "timediff.h" %3
-      call :element %1 lib "nonblock.h" %3
-      call :element %1 lib "warnless.h" %3
-      call :element %1 lib "curl_ctype.h" %3
-      call :element %1 lib "curl_multibyte.h" %3
-      call :element %1 lib "version_win32.h" %3
-      call :element %1 lib "dynbuf.h" %3
-      call :element %1 lib "curl_base64.h" %3
     ) else if "!var!" == "CURL_LIB_C_FILES" (
       for /f "delims=" %%c in ('dir /b ..\lib\*.c') do call :element %1 lib "%%c" %3
     ) else if "!var!" == "CURL_LIB_H_FILES" (
@@ -237,6 +162,10 @@ rem
       for /f "delims=" %%h in ('dir /b ..\lib\*.h') do call :element %1 lib "%%h" %3
     ) else if "!var!" == "CURL_LIB_RC_FILES" (
       for /f "delims=" %%r in ('dir /b ..\lib\*.rc') do call :element %1 lib "%%r" %3
+    ) else if "!var!" == "CURL_LIB_CURLX_C_FILES" (
+      for /f "delims=" %%c in ('dir /b ..\lib\curlx\*.c') do call :element %1 lib\curlx "%%c" %3
+    ) else if "!var!" == "CURL_LIB_CURLX_H_FILES" (
+      for /f "delims=" %%h in ('dir /b ..\lib\curlx\*.h') do call :element %1 lib\curlx "%%h" %3
     ) else if "!var!" == "CURL_LIB_VAUTH_C_FILES" (
       for /f "delims=" %%c in ('dir /b ..\lib\vauth\*.c') do call :element %1 lib\vauth "%%c" %3
     ) else if "!var!" == "CURL_LIB_VAUTH_H_FILES" (
@@ -263,7 +192,7 @@ rem
 
 rem Generates a single file xml element.
 rem
-rem %1 - Project Type (vcxproj for VC10, VC11, VC12, VC14, VC14.10 and VC14.30)
+rem %1 - Project Type (vcxproj for VC10, VC11, VC12, VC14, VC14.10, VC14.20 and VC14.30)
 rem %2 - Directory (src, lib, lib\vauth, lib\vquic, lib\vssh, lib\vtls)
 rem %3 - Source filename
 rem %4 - Output project file
@@ -277,6 +206,8 @@ rem
   ) else if "%2" == "lib\vssh" (
     set "TABS=				"
   ) else if "%2" == "lib\vtls" (
+    set "TABS=				"
+  ) else if "%2" == "lib\curlx" (
     set "TABS=				"
   ) else (
     set "TABS=			"
@@ -357,9 +288,11 @@ rem
   echo vc10      - Use Visual Studio 2010
   echo vc11      - Use Visual Studio 2012
   echo vc12      - Use Visual Studio 2013
-  echo vc14      - Use Visual Studio 2015
-  echo vc14.10   - Use Visual Studio 2017
-  echo vc14.30   - Use Visual Studio 2022
+  echo.
+  echo Only legacy Visual Studio project files can be generated.
+  echo.
+  echo To generate recent versions of Visual Studio project files use cmake.
+  echo Refer to INSTALL-CMAKE.md in the docs directory.
   echo.
   echo -clean    - Removes the project files
   goto error

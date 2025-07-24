@@ -25,6 +25,8 @@
  ***************************************************************************/
 #include "tool_setup.h"
 
-int parseconfig(const char *filename, struct GlobalConfig *config);
+int parseconfig(const char *filename, struct GlobalConfig *global);
+
+bool my_get_line(FILE *fp, struct dynbuf *db, bool *error);
 
 #endif /* HEADER_CURL_TOOL_PARSECFG_H */

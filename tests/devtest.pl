@@ -75,7 +75,7 @@ my $is_wsl = $uname_release =~ /Microsoft$/;
 sub logmsg {
     for(@_) {
         my $line = $_;
-        if ($is_wsl) {
+        if($is_wsl) {
             # use \r\n for WSL shell
             $line =~ s/\r?\n$/\r\n/g;
         }
@@ -110,7 +110,7 @@ sub parseprotocols {
 # Initialize @protocols from the curl binary under test
 #
 sub init_protocols {
-    for (`$CURL -V 2>/dev/null`) {
+    for (`$CURL -V 2>$dev_null`) {
         if(m/^Protocols: (.*)$/) {
             parseprotocols($1);
         }

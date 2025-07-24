@@ -31,16 +31,24 @@
  * must be used in real circumstances when a secure connection is required.
  */
 
+#ifndef OPENSSL_SUPPRESS_DEPRECATED
+#define OPENSSL_SUPPRESS_DEPRECATED
+#endif
+
 #include <openssl/ssl.h>
 #include <openssl/x509.h>
 #include <openssl/pem.h>
 #include <curl/curl.h>
 #include <stdio.h>
 
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic ignored "-Woverlength-strings"
+#endif
+
 static size_t writefunction(void *ptr, size_t size, size_t nmemb, void *stream)
 {
   fwrite(ptr, size, nmemb, stream);
-  return (nmemb*size);
+  return nmemb * size;
 }
 
 static CURLcode sslctx_function(CURL *curl, void *sslctx, void *parm)
@@ -157,7 +165,7 @@ static CURLcode sslctx_function(CURL *curl, void *sslctx, void *parm)
     printf("Use Key failed\n");
   }
 
-  /* free resources that have been allocated by openssl functions */
+  /* free resources that have been allocated by OpenSSL functions */
   if(bio)
     BIO_free(bio);
 
@@ -199,8 +207,7 @@ int main(void)
   curl_easy_setopt(ch, CURLOPT_URL, "https://www.example.com/");
   curl_easy_setopt(ch, CURLOPT_SSLKEYTYPE, "PEM");
 
-  /* first try: retrieve page without user certificate and key -> will fail
-   */
+  /* first try: retrieve page without user certificate and key -> fails */
   rv = curl_easy_perform(ch);
   if(rv == CURLE_OK) {
     printf("*** transfer succeeded ***\n");
@@ -209,7 +216,7 @@ int main(void)
     printf("*** transfer failed ***\n");
   }
 
-  /* second try: retrieve page using user certificate and key -> will succeed
+  /* second try: retrieve page using user certificate and key -> succeeds
    * load the certificate and key by installing a function doing the necessary
    * "modifications" to the SSL CONTEXT just before link init
    */
@@ -224,5 +231,5 @@ int main(void)
 
   curl_easy_cleanup(ch);
   curl_global_cleanup();
-  return rv;
+  return (int)rv;
 }

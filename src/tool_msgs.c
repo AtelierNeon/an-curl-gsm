@@ -23,12 +23,10 @@
  ***************************************************************************/
 #include "tool_setup.h"
 
-#define ENABLE_CURLX_PRINTF
-/* use our own printf() functions */
-#include "curlx.h"
-
 #include "tool_cfgable.h"
 #include "tool_msgs.h"
+#include "tool_cb_prg.h"
+#include "terminal.h"
 
 #include "memdebug.h" /* keep this as LAST include */
 
@@ -36,19 +34,24 @@
 #define NOTE_PREFIX "Note: "
 #define ERROR_PREFIX "curl: "
 
-static void voutf(struct GlobalConfig *config,
+static void voutf(struct GlobalConfig *global,
+                  const char *prefix,
+                  const char *fmt,
+                  va_list ap) CURL_PRINTF(3, 0);
+
+static void voutf(struct GlobalConfig *global,
                   const char *prefix,
                   const char *fmt,
                   va_list ap)
 {
-  size_t width = (79 - strlen(prefix));
+  size_t width = (get_terminal_columns() - strlen(prefix));
   DEBUGASSERT(!strchr(fmt, '\n'));
-  if(!config->silent) {
+  if(!global->silent) {
     size_t len;
     char *ptr;
     char *print_buffer;
 
-    print_buffer = curlx_mvaprintf(fmt, ap);
+    print_buffer = vaprintf(fmt, ap);
     if(!print_buffer)
       return;
     len = strlen(print_buffer);
@@ -87,12 +90,12 @@ static void voutf(struct GlobalConfig *config,
  * Emit 'note' formatted message on configured 'errors' stream, if verbose was
  * selected.
  */
-void notef(struct GlobalConfig *config, const char *fmt, ...)
+void notef(struct GlobalConfig *global, const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
-  if(config->tracetype)
-    voutf(config, NOTE_PREFIX, fmt, ap);
+  if(global->tracetype)
+    voutf(global, NOTE_PREFIX, fmt, ap);
   va_end(ap);
 }
 
@@ -100,14 +103,14 @@ void notef(struct GlobalConfig *config, const char *fmt, ...)
  * Emit warning formatted message on configured 'errors' stream unless
  * mute (--silent) was selected.
  */
-
-void warnf(struct GlobalConfig *config, const char *fmt, ...)
+void warnf(struct GlobalConfig *global, const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
-  voutf(config, WARN_PREFIX, fmt, ap);
+  voutf(global, WARN_PREFIX, fmt, ap);
   va_end(ap);
 }
+
 /*
  * Emit help formatted message on given stream. This is for errors with or
  * related to command line arguments.
@@ -134,12 +137,12 @@ void helpf(FILE *errors, const char *fmt, ...)
  * Emit error message on error stream if not muted. When errors are not tied
  * to command line arguments, use helpf() for such errors.
  */
-void errorf(struct GlobalConfig *config, const char *fmt, ...)
+void errorf(struct GlobalConfig *global, const char *fmt, ...)
 {
-  if(!config->silent || config->showerror) {
+  if(!global->silent || global->showerror) {
     va_list ap;
     va_start(ap, fmt);
-    voutf(config, ERROR_PREFIX, fmt, ap);
+    voutf(global, ERROR_PREFIX, fmt, ap);
     va_end(ap);
   }
 }
