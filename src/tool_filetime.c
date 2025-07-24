@@ -24,7 +24,6 @@
 #include "tool_filetime.h"
 #include "tool_cfgable.h"
 #include "tool_msgs.h"
-#include "curlx.h"
 
 #ifdef HAVE_UTIME_H
 #  include <utime.h>
@@ -38,17 +37,17 @@ int getfiletime(const char *filename, struct GlobalConfig *global,
 {
   int rc = 1;
 
-/* Windows stat() may attempt to adjust the unix GMT file time by a daylight
-   saving time offset and since it's GMT that is bad behavior. When we have
+/* Windows stat() may attempt to adjust the Unix GMT file time by a daylight
+   saving time offset and since it is GMT that is bad behavior. When we have
    access to a 64-bit type we can bypass stat and get the times directly. */
-#if defined(WIN32)
+#if defined(_WIN32) && !defined(CURL_WINDOWS_UWP)
   HANDLE hfile;
-  TCHAR *tchar_filename = curlx_convert_UTF8_to_tchar((char *)filename);
+  TCHAR *tchar_filename = curlx_convert_UTF8_to_tchar(filename);
 
   hfile = CreateFile(tchar_filename, FILE_READ_ATTRIBUTES,
-                      (FILE_SHARE_READ | FILE_SHARE_WRITE |
-                       FILE_SHARE_DELETE),
-                      NULL, OPEN_EXISTING, 0, NULL);
+                     (FILE_SHARE_READ | FILE_SHARE_WRITE |
+                      FILE_SHARE_DELETE),
+                     NULL, OPEN_EXISTING, 0, NULL);
   curlx_unicodefree(tchar_filename);
   if(hfile != INVALID_HANDLE_VALUE) {
     FILETIME ft;
@@ -56,10 +55,10 @@ int getfiletime(const char *filename, struct GlobalConfig *global,
       curl_off_t converted = (curl_off_t)ft.dwLowDateTime
         | ((curl_off_t)ft.dwHighDateTime) << 32;
 
-      if(converted < CURL_OFF_T_C(116444736000000000))
+      if(converted < 116444736000000000)
         warnf(global, "Failed to get filetime: underflow");
       else {
-        *stamp = (converted - CURL_OFF_T_C(116444736000000000)) / 10000000;
+        *stamp = (converted - 116444736000000000) / 10000000;
         rc = 0;
       }
     }
@@ -87,21 +86,21 @@ int getfiletime(const char *filename, struct GlobalConfig *global,
   return rc;
 }
 
-#if defined(HAVE_UTIME) || defined(HAVE_UTIMES) || defined(WIN32)
+#if defined(HAVE_UTIME) || defined(HAVE_UTIMES) || defined(_WIN32)
 void setfiletime(curl_off_t filetime, const char *filename,
                  struct GlobalConfig *global)
 {
   if(filetime >= 0) {
-/* Windows utime() may attempt to adjust the unix GMT file time by a daylight
-   saving time offset and since it's GMT that is bad behavior. When we have
+/* Windows utime() may attempt to adjust the Unix GMT file time by a daylight
+   saving time offset and since it is GMT that is bad behavior. When we have
    access to a 64-bit type we can bypass utime and set the times directly. */
-#if defined(WIN32)
+#if defined(_WIN32) && !defined(CURL_WINDOWS_UWP)
     HANDLE hfile;
-    TCHAR *tchar_filename = curlx_convert_UTF8_to_tchar((char *)filename);
+    TCHAR *tchar_filename = curlx_convert_UTF8_to_tchar(filename);
 
-    /* 910670515199 is the maximum unix filetime that can be used as a
+    /* 910670515199 is the maximum Unix filetime that can be used as a
        Windows FILETIME without overflow: 30827-12-31T23:59:59. */
-    if(filetime > CURL_OFF_T_C(910670515199)) {
+    if(filetime > 910670515199) {
       warnf(global, "Failed to set filetime %" CURL_FORMAT_CURL_OFF_T
             " on outfile: overflow", filetime);
       curlx_unicodefree(tchar_filename);
@@ -115,7 +114,7 @@ void setfiletime(curl_off_t filetime, const char *filename,
     curlx_unicodefree(tchar_filename);
     if(hfile != INVALID_HANDLE_VALUE) {
       curl_off_t converted = ((curl_off_t)filetime * 10000000) +
-        CURL_OFF_T_C(116444736000000000);
+        116444736000000000;
       FILETIME ft;
       ft.dwLowDateTime = (DWORD)(converted & 0xFFFFFFFF);
       ft.dwHighDateTime = (DWORD)(converted >> 32);
@@ -153,4 +152,4 @@ void setfiletime(curl_off_t filetime, const char *filename,
   }
 }
 #endif /* defined(HAVE_UTIME) || defined(HAVE_UTIMES) ||        \
-          defined(WIN32) */
+          defined(_WIN32) */

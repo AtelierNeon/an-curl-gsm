@@ -9,8 +9,6 @@ FAILURE
 
 # Server-side
 <reply>
-<data>
-</data>
 </reply>
 
 # Client-side
@@ -20,7 +18,7 @@ none
 </server>
 <features>
 file
-large_file
+Largefile
 </features>
 <name>
 Invalid large X- range on a file://

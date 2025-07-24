@@ -28,12 +28,9 @@
 
 #if defined(USE_CURL_NTLM_CORE)
 
-#if defined(USE_OPENSSL)
-#  include <openssl/ssl.h>
-#elif defined(USE_WOLFSSL)
-#  include <wolfssl/options.h>
-#  include <wolfssl/openssl/ssl.h>
-#endif
+#include "vauth/vauth.h"
+
+struct ntlmdata;
 
 /* Helpers to generate function byte arguments in little endian order */
 #define SHORTPAIR(x) ((int)((x) & 0xff)), ((int)(((x) >> 8) & 0xff))

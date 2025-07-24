@@ -52,7 +52,7 @@ $acommitters = `git shortlog -s | wc -l`;
 $ncommitters = $acommitters - $bcommitters;
 
 # number of contributors right now
-$acontribs = `./scripts/contrithanks.sh | grep -c '^[^ ]'`;
+$acontribs = `./scripts/contrithanks.sh stdout | wc -l`;
 # number when the tag was set
 $bcontribs = `git show $start:docs/THANKS | grep -c '^[^ ]'`;
 # delta
@@ -64,7 +64,7 @@ sub setopts {
     open(H, "$f");
     my $opts;
     while(<H>) {
-        if(/^  CURLOPT(|DEPRECATED)\(/ && ($_ !~ /OBSOLETE/))  {
+        if(/^  CURLOPT(|DEPRECATED)\(/ && ($_ !~ /OBSOLETE/)) {
             $opts++;
         }
     }
@@ -89,12 +89,13 @@ $deletes=`git diff-tree --diff-filter=A -r --summary origin/$branch $start 2>/de
 $creates=`git diff-tree --diff-filter=D -r --summary origin/$branch $start 2>/dev/null| wc -l`;
 
 # Time since that tag
-$tagged=`git for-each-ref --format="%(refname:short) | %(taggerdate:unix)" refs/tags/* | grep ^$start | cut "-d|" -f2`; # unix timestamp
+$tagged=`git for-each-ref --format="%(refname:short) | %(taggerdate:unix)" refs/tags/* | grep ^$start | cut "-d|" -f2`; # Unix timestamp
 $taggednice=`git for-each-ref --format="%(refname:short) | %(creatordate)" refs/tags/* | grep ^$start | cut '-d|' -f2`; # human readable time
 chomp $taggednice;
 $now=`date +%s`;
 $elapsed=$now - $tagged; # number of seconds since tag
 $total=$now - `date -d 19980320 +%s`;
+$totalhttpget=$now - `date -d 19961111 +%s`;
 
 # Number of public functions in libcurl
 $apublic=`git grep ^CURL_EXTERN -- include/curl | wc -l`;
@@ -140,9 +141,9 @@ close(F);
 # Produce the summary
 
 print "== Since $start $taggednice ==\n";
-printf "Elapsed time:                   %.1f days (total %d)\n",
-    $elapsed / 3600 / 24,
-    $total / 3600 / 24;
+my $days = $elapsed / 3600 / 24;
+printf "Elapsed time:                   %.1f days (total %d / %d)\n",
+    $days, $total / 3600 / 24, $totalhttpget / 3600 / 24;
 printf "Commits:                        %d (total %d)\n",
     $commits, $acommits;
 printf "Commit authors:                 %d, %d new (total %d)\n",
@@ -156,7 +157,8 @@ printf "New curl_easy_setopt() options: %d (total %d)\n",
 printf "New command line options:       %d (total %d)\n",
     $noptions, $aoptions;
 printf "Changes logged:                 %d\n", $numchanges;
-printf "Bugfixes logged:                %d\n", $numbugfixes;
+printf "Bugfixes logged:                %d (%.2f per day)\n",
+    $numbugfixes, $numbugfixes / $days;
 printf "Added files:                    %d (total %d)\n",
     $creates, $afiles;
 printf "Deleted files:                  %d (delta: %d)\n", $deletes,

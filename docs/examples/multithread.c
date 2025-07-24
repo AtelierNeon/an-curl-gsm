@@ -35,13 +35,13 @@
 /*
   List of URLs to fetch.
 
-  If you intend to use a SSL-based protocol here you might need to setup TLS
+  If you intend to use an SSL-based protocol here you might need to setup TLS
   library mutex callbacks as described here:
 
   https://curl.se/libcurl/c/threadsafe.html
 
 */
-const char * const urls[NUMT]= {
+static const char * const urls[NUMT]= {
   "https://curl.se/",
   "ftp://example.com/",
   "https://example.net/",
@@ -67,7 +67,7 @@ static void *pull_one_url(void *url)
    void * (*start_func)(void *), void *arg);
 */
 
-int main(int argc, char **argv)
+int main(void)
 {
   pthread_t tid[NUMT];
   int i;
@@ -75,7 +75,7 @@ int main(int argc, char **argv)
   /* Must initialize libcurl before any threads are started */
   curl_global_init(CURL_GLOBAL_ALL);
 
-  for(i = 0; i< NUMT; i++) {
+  for(i = 0; i < NUMT; i++) {
     int error = pthread_create(&tid[i],
                                NULL, /* default attributes please */
                                pull_one_url,
@@ -87,7 +87,7 @@ int main(int argc, char **argv)
   }
 
   /* now wait for all threads to terminate */
-  for(i = 0; i< NUMT; i++) {
+  for(i = 0; i < NUMT; i++) {
     pthread_join(tid[i], NULL);
     fprintf(stderr, "Thread %d terminated\n", i);
   }
