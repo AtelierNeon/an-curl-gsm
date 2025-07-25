@@ -252,6 +252,8 @@ if(WIN32)
 elseif(DOS OR AMIGA)
   set(BUILD_SHARED_LIBS OFF)
   set(BUILD_STATIC_LIBS ON)
+else()
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 option(CURL_LTO "Enable compiler Link Time Optimizations" OFF)
 
