@@ -397,18 +397,18 @@ else()
   set(LIB_SELECTED ${LIB_STATIC})
 endif()
 
-#if(WIN32)
-#  option(CURL_STATIC_CRT "Build libcurl with static CRT with MSVC (/MT)" OFF)
-#  if(CURL_STATIC_CRT AND MSVC)
-#    if(MSVC_VERSION GREATER_EQUAL 1900 OR BUILD_STATIC_CURL OR NOT BUILD_CURL_EXE)
-#      set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-#      set_property(DIRECTORY APPEND PROPERTY COMPILE_OPTIONS "$<$<CONFIG:Release>:-MT>")
-#      set_property(DIRECTORY APPEND PROPERTY COMPILE_OPTIONS "$<$<CONFIG:Debug>:-MTd>")
-#    else()
-#      message(WARNING "Static CRT requires UCRT, static libcurl or no curl executable.")
-#    endif()
-#  endif()
-#endif()
+if(WIN32)
+  option(CURL_STATIC_CRT "Build libcurl with static CRT with MSVC (/MT)" OFF)
+  if(CURL_STATIC_CRT AND MSVC)
+    if(MSVC_VERSION GREATER_EQUAL 1900 OR BUILD_STATIC_CURL OR NOT BUILD_CURL_EXE)
+      set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+      set_property(DIRECTORY APPEND PROPERTY COMPILE_OPTIONS "$<$<CONFIG:Release>:-MT>")
+      set_property(DIRECTORY APPEND PROPERTY COMPILE_OPTIONS "$<$<CONFIG:Debug>:-MTd>")
+    else()
+      message(WARNING "Static CRT requires UCRT, static libcurl or no curl executable.")
+    endif()
+  endif()
+endif()
 
 # Override to force-disable or force-enable the use of pkg-config.
 if((UNIX AND NOT ANDROID AND (NOT APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")) OR
@@ -858,7 +858,6 @@ if(CURL_USE_OPENSSL OR CURL_WITH_OPENSSL)
     # Depend on OpenSSL via imported targets. This allows our dependents to
     # get our dependencies transitively.
     list(APPEND CURL_LIBS OpenSSL::SSL OpenSSL::Crypto)
-    set_target_properties(OpenSSL::SSL PROPERTIES INTERFACE_LIBCURL_PC_MODULES "openssl")
 
     if(CURL_DEFAULT_SSL_BACKEND AND CURL_DEFAULT_SSL_BACKEND STREQUAL "openssl")
       set(_valid_default_ssl_backend TRUE)
@@ -1017,9 +1016,6 @@ if(ZLIB_FOUND)
   # Depend on ZLIB via imported targets. This allows our dependents to
   # get our dependencies transitively.
   list(APPEND CURL_LIBS ZLIB::ZLIB)
-  if(NOT DEFINED ZLIB_USE_STATIC_LIBS)
-    set_target_properties(ZLIB::ZLIB PROPERTIES INTERFACE_LIBCURL_PC_MODULES "zlib")
-  endif()
 endif()
 
 set(HAVE_BROTLI OFF)
@@ -1350,7 +1346,7 @@ if(CURL_USE_LIBSSH2)
     list(APPEND CURL_LIBS ${LIBSSH2_LIBRARIES})
     set(USE_LIBSSH2 ON)
   else()
-    find_package(Libssh2)
+    find_package(Libssh2 MODULE)
     if(LIBSSH2_FOUND)
       set(CURL_LIBS CURL::libssh2 ${CURL_LIBS})  # keep it before TLS-crypto, compression
       set(USE_LIBSSH2 ON)

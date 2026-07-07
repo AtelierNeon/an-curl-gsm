@@ -24,6 +24,8 @@
 #include <winver.h>
 #include "tool_version.h"
 
+IDI_ICON1 ICON "curl.ico"
+
 LANGUAGE  0, 0
 
 #define RC_VERSION  CURL_VERSION_MAJOR, CURL_VERSION_MINOR, CURL_VERSION_PATCH, 0
